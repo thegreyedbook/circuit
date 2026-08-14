@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logic Foundry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --board:#0c1513; --panel:#10201d; --panel2:#152a26; --rule:#22403a;
+    --ink:#d3e2de; --dim:#71877f; --cyan:#38cbcb;
+    --copper:#ffcf8a; --copperoff:#463823;
+    --red:#ff5555; --green:#40d07a; --blue:#4c9dff; --warn:#ffcf3f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:radial-gradient(130% 90% at 50% -20%,#12211d,var(--board) 65%) fixed,var(--board);
+    color:var(--ink);font-family:'Chakra Petch',system-ui,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+  .mono{font-family:'IBM Plex Mono',monospace}
+  button{font-family:inherit;cursor:pointer;color:var(--ink)}
+  button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  #app{height:100vh;display:grid;grid-template-columns:190px 1fr 290px;gap:12px;padding:12px;max-width:1320px;margin:0 auto}
+  @media(max-width:1080px){#app{grid-template-columns:170px 1fr;}.rightcol{display:none}}
+  header{grid-column:1 / -1;display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--rule);padding-bottom:8px}
+  header h1{font-size:20px;font-weight:700;letter-spacing:.22em}
+  header h1 b{color:var(--cyan)}
+  header .puz{font-size:13px;color:var(--dim);letter-spacing:.04em}
+  header .puz b{color:var(--copper)}
+  .leftcol{display:flex;flex-direction:column;gap:14px;overflow:auto}
+  .grp{border:1px solid var(--rule);border-radius:8px;background:var(--panel);padding:10px}
+  .grp h3{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+  .tools{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .tool{background:var(--panel2);border:1px solid var(--rule);border-radius:6px;padding:8px 6px;font-size:12px;letter-spacing:.05em;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--ink)}
+  .tool small{font-size:9px;color:var(--dim)}
+  .tool.sel{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan) inset;color:var(--cyan)}
+  .tool:hover{border-color:var(--cyan)}
+  .hintline{font-size:11px;color:var(--dim);line-height:1.55}
+  .hintline b{color:var(--ink);font-weight:600}
+  .centercol{display:flex;flex-direction:column;gap:10px;min-width:0}
+  .canvaswrap{border:1px solid var(--rule);border-radius:10px;background:linear-gradient(180deg,#0e1a17,#0a1210);padding:10px;display:flex;justify-content:center;align-items:center;flex:1;min-height:0}
+  #board{display:block;max-width:100%;max-height:100%;touch-action:none}
+  .runbar{display:flex;align-items:center;gap:10px}
+  .runbtn{background:var(--cyan);color:#052220;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:700;letter-spacing:.1em}
+  .runbtn:hover{filter:brightness(1.08)}
+  .ghostbtn{background:transparent;border:1px solid var(--rule);border-radius:8px;padding:10px 14px;font-size:13px;letter-spacing:.06em}
+  .ghostbtn:hover{border-color:var(--cyan);color:var(--cyan)}
+  .verdict{font-size:14px;font-weight:600;letter-spacing:.04em;margin-left:auto}
+  .verdict.ok{color:var(--green)} .verdict.bad{color:var(--red)} .verdict.warn{color:var(--warn)}
+  .metrics{display:flex;gap:8px}
+  .metric{flex:1;border:1px solid var(--rule);border-radius:8px;background:var(--panel);padding:8px 10px}
+  .metric .k{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+  .metric .v{font-family:'IBM Plex Mono',monospace;font-size:20px;margin-top:2px}
+  .metric .b{font-size:10px;color:var(--copper);font-family:'IBM Plex Mono',monospace}
+  .rightcol{display:flex;flex-direction:column;gap:12px;overflow:auto}
+  .spec{border:1px solid var(--rule);border-radius:8px;background:var(--panel);padding:10px}
+  .spec p{font-size:12px;color:var(--dim);line-height:1.5;margin-bottom:8px}
+  table.tt{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:12px}
+  table.tt th{font-size:9px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;padding:4px 3px;border-bottom:1px solid var(--rule);font-weight:500}
+  table.tt td{padding:4px 3px;text-align:center;border-bottom:1px solid #1a302b}
+  table.tt tr.cur{background:#183430}
+  .bit0{color:var(--dim)} .bit1{color:var(--copper);font-weight:600}
+  .sw{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid #0006;vertical-align:middle}
+  .pf{font-weight:700}.pf.ok{color:var(--green)}.pf.no{color:var(--red)}
+  .puzzlelist{display:flex;flex-direction:column;gap:4px}
+  .plink{display:flex;align-items:center;justify-content:space-between;background:var(--panel2);border:1px solid var(--rule);border-radius:6px;padding:7px 10px;font-size:12px}
+  .plink:hover{border-color:var(--cyan)}
+  .plink.active{border-color:var(--cyan);color:var(--cyan)}
+  .plink .chk{color:var(--green);font-size:13px}
+  .overlay{position:fixed;inset:0;background:#06100dcc;display:flex;align-items:center;justify-content:center;z-index:30;padding:20px}
+  .modal{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--rule);border-radius:12px;padding:26px 30px;max-width:540px;box-shadow:0 20px 60px #000a}
+  .modal h2{font-size:22px;font-weight:700;letter-spacing:.14em;margin-bottom:6px}
+  .modal h2 b{color:var(--cyan)}
+  .modal p{font-size:13px;line-height:1.6;margin-bottom:10px}
+  .modal ul{list-style:none;font-size:13px;line-height:1.7}
+  .modal ul b{color:var(--copper)}
+  .modal .cta{margin-top:16px;background:var(--cyan);color:#052220;border:none;border-radius:8px;padding:12px 22px;font-weight:700;letter-spacing:.1em;width:100%}
+  .hidden{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>LOGIC <b>FOUNDRY</b></h1>
+    <div class="puz">PUZZLE · <b id="puzName">—</b></div>
+  </header>
+  <div class="leftcol">
+    <div class="grp"><h3>Wiring</h3><div class="tools" id="wireTools"></div></div>
+    <div class="grp"><h3>Gates</h3><div class="tools" id="gateTools"></div></div>
+    <div class="grp"><h3>Controls</h3>
+      <div class="hintline">
+        <b>Drag</b> to lay a trace · <b>Click</b> to place a gate<br>
+        <b>R</b> rotates the tool or a hovered gate<br>
+        <b>Right-click</b> erases · click an <b>input pin</b> to probe<br>
+        Traces only connect along the path you drag — parallel runs stay separate.
+      </div>
+    </div>
+  </div>
+  <div class="centercol">
+    <div class="canvaswrap"><canvas id="board"></canvas></div>
+    <div class="runbar">
+      <button class="runbtn" id="btnRun">RUN TEST</button>
+      <button class="ghostbtn" id="btnClear">CLEAR</button>
+      <span class="verdict" id="verdict">Build a circuit, then run the test.</span>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="k">Gates</div><div class="v mono" id="mGates">0</div><div class="b" id="bGates">best —</div></div>
+      <div class="metric"><div class="k">Tiles</div><div class="v mono" id="mTiles">0</div><div class="b" id="bTiles">best —</div></div>
+      <div class="metric"><div class="k">Delay</div><div class="v mono" id="mDelay">0</div><div class="b" id="bDelay">best —</div></div>
+    </div>
+  </div>
+  <div class="rightcol">
+    <div class="spec">
+      <h3 style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:8px">Specification</h3>
+      <p id="puzDesc">—</p><div id="ttWrap"></div>
+    </div>
+    <div class="grp"><h3>Puzzles</h3><div class="puzzlelist" id="puzzleList"></div></div>
+  </div>
+</div>
+<div class="overlay" id="intro">
+  <div class="modal">
+    <h2>LOGIC <b>FOUNDRY</b></h2>
+    <p>Wire up logic gates so the outputs match the specification — for <em>every</em> combination of inputs. The test is deterministic: same circuit, same result. All the skill is in the design.</p>
+    <ul>
+      <li><b>Signals are light.</b> A trace carrying a 1 glows copper; a 0 stays dark. Click an input pin to flip it and watch the board settle.</li>
+      <li><b>Traces follow your drag.</b> They connect only along the path you draw, so two signals can run side by side without shorting. Cross a perpendicular trace and it bridges automatically.</li>
+      <li><b>Gates</b> take inputs on the flat sides and drive the output arrow. Rotate with <b>R</b>.</li>
+      <li><b>RGB LEDs</b> mix additively — Red + Green = yellow, all three = white. Solve each channel, then route it in.</li>
+    </ul>
+    <button class="cta" id="btnBegin">ENTER THE BENCH</button>
+  </div>
+</div>
+<script>
+"use strict";
+(function(){
+  const DIRS=["N","E","S","W"];
+  const DV={N:[-1,0],E:[0,1],S:[1,0],W:[0,-1]};
+  const OPP={N:"S",E:"W",S:"N",W:"E"};
+  const hAxis=d=>(d==="E"||d==="W");
+  function rotDir(d,k){return DIRS[(DIRS.indexOf(d)+k)%4];}
+  const GATEPORTS={not:{W:"in",E:"out"},and:{W:"in",N:"in",E:"out"},or:{W:"in",N:"in",E:"out"},xor:{W:"in",N:"in",E:"out"},nand:{W:"in",N:"in",E:"out"}};
+  const GATES=["and","or","not","xor","nand"];
+  const GATEFN={and:v=>v[0]&&v[1],or:v=>v[0]||v[1],xor:v=>v[0]!==v[1],nand:v=>!(v[0]&&v[1]),not:v=>!v[0]};
+  function applyRot(base,k){const o={};for(const d in base)o[rotDir(d,k)]=base[d];return o;}
+  function portsOf(cell){if(!cell)return null;if(cell.t==="src")return applyRot({E:"out"},cell.rot||0);if(cell.t==="led")return applyRot({W:"in"},cell.rot||0);if(cell.t==="rgb")return {W:"in",N:"in",S:"in"};if(GATEPORTS[cell.t])return applyRot(GATEPORTS[cell.t],cell.rot||0);return null;}
+  function facing(cell,role){const pm=portsOf(cell);for(const d in pm)if(pm[d]===role)return d;return "E";}
+  const blankMask=()=>({N:false,E:false,S:false,W:false});
+
+  const W=16,H=11;
+  function Sr(r,c,label){return {t:"src",r,c,rot:0,label,fixed:true};}
+  function Ld(r,c,label){return {t:"led",r,c,rot:0,label,fixed:true};}
+  function Rg(r,c,label){return {t:"rgb",r,c,rot:0,label,fixed:true};}
+  const RC=15; // right column for loads
+  const PUZZLES=[
+    {id:"buf",name:"Continuity",desc:"Route input A across to the lamp. Just a trace — get a feel for the bench.",
+      fixed:[Sr(5,0,"A"),Ld(5,RC,"Y")],inputs:[[5,0]],outputs:[{kind:"led",at:[5,RC],label:"Y"}],expect:b=>[b[0]]},
+    {id:"not",name:"Inverter",desc:"Y is on when A is off. One NOT gate.",
+      fixed:[Sr(5,0,"A"),Ld(5,RC,"Y")],inputs:[[5,0]],outputs:[{kind:"led",at:[5,RC],label:"Y"}],expect:b=>[b[0]?0:1]},
+    {id:"and",name:"Both",desc:"Y is on only when A AND B are both on.",
+      fixed:[Sr(4,0,"A"),Sr(6,0,"B"),Ld(5,RC,"Y")],inputs:[[4,0],[6,0]],outputs:[{kind:"led",at:[5,RC],label:"Y"}],expect:b=>[b[0]&&b[1]?1:0]},
+    {id:"or",name:"Either",desc:"Y is on when A OR B (or both) are on.",
+      fixed:[Sr(4,0,"A"),Sr(6,0,"B"),Ld(5,RC,"Y")],inputs:[[4,0],[6,0]],outputs:[{kind:"led",at:[5,RC],label:"Y"}],expect:b=>[b[0]||b[1]?1:0]},
+    {id:"xor",name:"Difference",desc:"Y is on only when A and B differ. This is XOR — the workhorse of arithmetic.",
+      fixed:[Sr(4,0,"A"),Sr(6,0,"B"),Ld(5,RC,"Y")],inputs:[[4,0],[6,0]],outputs:[{kind:"led",at:[5,RC],label:"Y"}],expect:b=>[b[0]!==b[1]?1:0]},
+    {id:"match",name:"Match Light",desc:"An RGB lamp: show GREEN when A equals B, RED when they differ. Green channel is XNOR, red is XOR.",
+      fixed:[Sr(4,0,"A"),Sr(6,0,"B"),Rg(5,RC,"RGB")],inputs:[[4,0],[6,0]],outputs:[{kind:"rgb",at:[5,RC],label:"RGB"}],
+      expect:b=>{const eq=b[0]===b[1];return [{r:eq?0:1,g:eq?1:0,b:0}];}},
+    {id:"traffic",name:"Traffic Signal",desc:"2-bit state S1 S0 → RGB lamp. 00 red · 01 green · 10 yellow (R+G) · 11 off. The yellow row is the trick: drive red and green together.",
+      fixed:[Sr(4,0,"S1"),Sr(6,0,"S0"),Rg(5,RC,"RGB")],inputs:[[4,0],[6,0]],outputs:[{kind:"rgb",at:[5,RC],label:"RGB"}],
+      expect:b=>{const s1=b[0],s0=b[1];return [{r:s0?0:1,g:(s1!==s0)?1:0,b:0}];}},
+    {id:"half",name:"Half Adder",desc:"Add two bits. Sum Σ = A XOR B, Carry C = A AND B. Two lamps, one circuit.",
+      fixed:[Sr(4,0,"A"),Sr(6,0,"B"),Ld(4,RC,"Σ"),Ld(7,RC,"C")],inputs:[[4,0],[6,0]],
+      outputs:[{kind:"led",at:[4,RC],label:"Σ"},{kind:"led",at:[7,RC],label:"C"}],expect:b=>[b[0]!==b[1]?1:0,b[0]&&b[1]?1:0]},
+    {id:"full",name:"Full Adder",desc:"Three bits in, sum and carry out. Σ = A⊕B⊕Cin, Cout = majority. Share the A⊕B subexpression and it falls right out.",
+      fixed:[Sr(3,0,"A"),Sr(5,0,"B"),Sr(7,0,"Cin"),Ld(3,RC,"Σ"),Ld(7,RC,"Cout")],inputs:[[3,0],[5,0],[7,0]],
+      outputs:[{kind:"led",at:[3,RC],label:"Σ"},{kind:"led",at:[7,RC],label:"Cout"}],
+      expect:b=>{const s=(b[0]?1:0)+(b[1]?1:0)+(b[2]?1:0);return [s&1,s>=2?1:0];}},
+  ];
+
+  let grid,puzzle,probe,tool="wire",toolRot=0,hover=null,drawing=false,lastRC=null,eraseDrag=false;
+  const progress={};
+
+  function loadPuzzle(p){
+    puzzle=p;grid=Array.from({length:H},()=>Array(W).fill(null));
+    for(const f of p.fixed)grid[f.r][f.c]=Object.assign({},f);
+    probe=p.inputs.map(()=>false);rebuild();
+    document.getElementById("puzName").textContent=p.name;
+    document.getElementById("puzDesc").textContent=p.desc;
+    window._lastResults=null;setVerdict("Build a circuit, then run the test.","");
+    renderPuzzleList();renderTruth();refreshMetrics();draw();
+  }
+
+  let uf,C;
+  function makeUF(){const parent={};return{find(x){if(parent[x]===undefined)parent[x]=x;while(parent[x]!==x){parent[x]=parent[parent[x]];x=parent[x];}return x;},union(a,b){const ra=this.find(a),rb=this.find(b);if(ra!==rb)parent[ra]=rb;}};}
+  const KW=(r,c)=>"w:"+r+":"+c,KH=(r,c)=>"h:"+r+":"+c,KVv=(r,c)=>"v:"+r+":"+c,KP=(r,c,d)=>"p:"+r+":"+c+":"+d;
+  function inb(r,c){return r>=0&&r<H&&c>=0&&c<W;}
+
+  function rebuild(){
+    uf=makeUF();
+    for(let r=0;r<H;r++)for(let c=0;c<W;c++){const cell=grid[r][c];if(!cell)continue;
+      if(cell.t==="wire"){uf.find(KW(r,c));
+        for(const d of DIRS){if(!cell.m[d])continue;const[dr,dc]=DV[d];const nr=r+dr,nc=c+dc;if(!inb(nr,nc))continue;const nb=grid[nr][nc];if(!nb)continue;
+          if(nb.t==="wire"){if(nb.m[OPP[d]])uf.union(KW(r,c),KW(nr,nc));}
+          else if(nb.t==="cross")uf.union(KW(r,c),hAxis(d)?KH(nr,nc):KVv(nr,nc));}
+      } else if(cell.t==="cross"){uf.find(KH(r,c));uf.find(KVv(r,c));
+        for(const d of DIRS){const[dr,dc]=DV[d];const nr=r+dr,nc=c+dc;if(!inb(nr,nc))continue;const nb=grid[nr][nc];if(!nb)continue;const mine=hAxis(d)?KH(r,c):KVv(r,c);
+          if(nb.t==="wire"){if(nb.m[OPP[d]])uf.union(mine,KW(nr,nc));}
+          else if(nb.t==="cross")uf.union(mine,hAxis(d)?KH(nr,nc):KVv(nr,nc));}}
+    }
+    for(let r=0;r<H;r++)for(let c=0;c<W;c++){const pm=portsOf(grid[r][c]);if(!pm)continue;
+      for(const d in pm){uf.find(KP(r,c,d));const[dr,dc]=DV[d];const nr=r+dr,nc=c+dc;if(!inb(nr,nc))continue;const nb=grid[nr][nc];if(!nb)continue;
+        if(nb.t==="wire"){if(nb.m[OPP[d]])uf.union(KP(r,c,d),KW(nr,nc));}
+        else if(nb.t==="cross")uf.union(KP(r,c,d),hAxis(d)?KH(nr,nc):KVv(nr,nc));
+        else{const npm=portsOf(nb);if(npm&&npm[OPP[d]])uf.union(KP(r,c,d),KP(nr,nc,OPP[d]));}}}
+    const srcs=[],leds=[],rgbs=[],gates=[];
+    for(let r=0;r<H;r++)for(let c=0;c<W;c++){const cell=grid[r][c];if(!cell)continue;
+      if(cell.t==="src")srcs.push({r,c,net:uf.find(KP(r,c,facing(cell,"out")))});
+      else if(cell.t==="led")leds.push({r,c,label:cell.label,net:uf.find(KP(r,c,facing(cell,"in")))});
+      else if(cell.t==="rgb")rgbs.push({r,c,label:cell.label,rN:uf.find(KP(r,c,"W")),gN:uf.find(KP(r,c,"N")),bN:uf.find(KP(r,c,"S"))});
+      else if(GATEPORTS[cell.t]){const pm=portsOf(cell);const inN=[];let outN=null;for(const d in pm){if(pm[d]==="in")inN.push(uf.find(KP(r,c,d)));else outN=uf.find(KP(r,c,d));}gates.push({r,c,t:cell.t,inNets:inN,outNet:outN});}}
+    const driver={};srcs.forEach(s=>driver[s.net]=(driver[s.net]||0)+1);gates.forEach(g=>driver[g.outNet]=(driver[g.outNet]||0)+1);
+    C={srcs,leds,rgbs,gates,driver};
+  }
+
+  function simulate(inVals){const val={},tick={},done={},driver=C.driver;
+    C.srcs.forEach((s,i)=>{if(driver[s.net]===1){val[s.net]=!!inVals[i];tick[s.net]=0;done[s.net]=true;}});
+    let changed=true,guard=0;
+    while(changed&&guard++<C.gates.length+4){changed=false;for(const g of C.gates){if(done[g.outNet])continue;if(driver[g.outNet]!==1){val[g.outNet]=false;tick[g.outNet]=0;done[g.outNet]=true;changed=true;continue;}let ready=true,tin=0;const iv=[];for(const nn of g.inNets){if(!driver[nn]){iv.push(false);}else if(done[nn]){iv.push(!!val[nn]);tin=Math.max(tin,tick[nn]);}else{ready=false;break;}}if(!ready)continue;val[g.outNet]=GATEFN[g.t](iv);tick[g.outNet]=tin+1;done[g.outNet]=true;changed=true;}}
+    const loop=C.gates.some(g=>!done[g.outNet]);
+    const NV=id=>(driver[id]===1&&done[id])?(val[id]?1:0):0;const NT=id=>(done[id]?tick[id]:0);
+    return {NV,NT,loop,nid:k=>uf.find(k)};
+  }
+  function shorts(){const s=new Set();for(const id in C.driver)if(C.driver[id]>1)s.add(id);return s;}
+
+  function metrics(){let gates=0,tiles=0;for(let r=0;r<H;r++)for(let c=0;c<W;c++){const cell=grid[r][c];if(!cell||cell.fixed)continue;tiles++;if(GATEPORTS[cell.t])gates++;}
+    const sim=simulate(probe.map(v=>v?1:0));let delay=0;for(const l of C.leds)delay=Math.max(delay,sim.NT(l.net));for(const g of C.rgbs)delay=Math.max(delay,sim.NT(g.rN),sim.NT(g.gN),sim.NT(g.bN));return {gates,tiles,delay};}
+  function refreshMetrics(){const m=metrics();document.getElementById("mGates").textContent=m.gates;document.getElementById("mTiles").textContent=m.tiles;document.getElementById("mDelay").textContent=m.delay;
+    const b=progress[puzzle.id];document.getElementById("bGates").textContent=b?("best "+b.gates):"best —";document.getElementById("bTiles").textContent=b?("best "+b.tiles):"best —";document.getElementById("bDelay").textContent=b?("best "+b.delay):"best —";}
+
+  function bitLabel(i){const[r,c]=puzzle.inputs[i];return grid[r][c].label;}
+  function runTest(){
+    const sh=shorts();if(sh.size){setVerdict("⚠ Shorted net — two outputs drive the same trace.","warn");draw();return;}
+    const n=puzzle.inputs.length,rows=1<<n;let firstFail=null;const results=[];let anyLoop=false;
+    for(let i=0;i<rows;i++){const bits=[];for(let k=0;k<n;k++)bits.push((i>>(n-1-k))&1);
+      const sim=simulate(bits);if(sim.loop)anyLoop=true;const exp=puzzle.expect(bits);const got=[];let ok=true;
+      puzzle.outputs.forEach((o,oi)=>{if(o.kind==="led"){const led=C.leds.find(L=>L.r===o.at[0]&&L.c===o.at[1]);const v=led?sim.NV(led.net):0;got.push(v);if(v!==exp[oi])ok=false;}
+        else{const rg=C.rgbs.find(G=>G.r===o.at[0]&&G.c===o.at[1]);const cv={r:rg?sim.NV(rg.rN):0,g:rg?sim.NV(rg.gN):0,b:rg?sim.NV(rg.bN):0};got.push(cv);const e=exp[oi];if(cv.r!==e.r||cv.g!==e.g||cv.b!==e.b)ok=false;}});
+      results.push({bits,got,ok});if(!ok&&firstFail===null)firstFail=bits;}
+    if(anyLoop){setVerdict("⚠ Feedback loop — v1 is combinational only.","warn");draw();return;}
+    window._lastResults=results;
+    if(results.every(r=>r.ok)){const m=metrics();const b=progress[puzzle.id];
+      progress[puzzle.id]={solved:true,gates:b?Math.min(b.gates,m.gates):m.gates,tiles:b?Math.min(b.tiles,m.tiles):m.tiles,delay:b?Math.min(b.delay,m.delay):m.delay};
+      setVerdict("✓ SOLVED — "+m.gates+" gates · "+m.tiles+" tiles · delay "+m.delay,"ok");renderPuzzleList();}
+    else{probe=firstFail.map(v=>!!v);setVerdict("✗ Fails on "+puzzle.inputs.map((_,i)=>bitLabel(i)+"="+firstFail[i]).join(" ")+" — see highlighted row.","bad");}
+    refreshMetrics();renderTruth();draw();
+  }
+
+  // ---------- rendering ----------
+  const cv=document.getElementById("board"),g2=cv.getContext("2d");
+  let CELL=42,DPR=1;
+  function sizeCanvas(){const wrap=cv.parentElement,availW=wrap.clientWidth-20,availH=wrap.clientHeight-20;
+    CELL=Math.max(26,Math.min(48,Math.floor(Math.min(availW/W,availH/H))));DPR=window.devicePixelRatio||1;
+    cv.width=W*CELL*DPR;cv.height=H*CELL*DPR;cv.style.width=(W*CELL)+"px";cv.style.height=(H*CELL)+"px";g2.setTransform(DPR,0,0,DPR,0,0);}
+  function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+  function onColor(v,short){return short?css("--red"):(v?css("--copper"):css("--copperoff"));}
+
+  function draw(){
+    if(!cv.width)sizeCanvas();
+    const sim=simulate(probe.map(v=>v?1:0)),sh=shorts();
+    g2.clearRect(0,0,cv.width,cv.height);g2.fillStyle=css("--board");g2.fillRect(0,0,W*CELL,H*CELL);
+    g2.fillStyle="#173029";for(let r=0;r<=H;r++)for(let c=0;c<=W;c++){g2.beginPath();g2.arc(c*CELL,r*CELL,1,0,7);g2.fill();}
+    for(let r=0;r<H;r++)for(let c=0;c<W;c++){const cell=grid[r][c];if(cell)drawCell(r,c,cell,sim,sh);}
+    if(hover&&inb(hover.r,hover.c)){g2.strokeStyle=css("--cyan");g2.globalAlpha=.6;g2.lineWidth=2;g2.strokeRect(hover.c*CELL+2,hover.r*CELL+2,CELL-4,CELL-4);g2.globalAlpha=1;}
+  }
+  function drawCell(r,c,cell,sim,sh){
+    const x=c*CELL,y=r*CELL,cx=x+CELL/2,cy=y+CELL/2;
+    const netVal=k=>sim.NV(sim.nid(k)),isShort=k=>sh.has(sim.nid(k));
+    if(cell.t==="wire"){const key=KW(r,c),v=netVal(key),sc=isShort(key),col=onColor(v,sc);
+      g2.strokeStyle=col;g2.lineWidth=Math.max(3,CELL*0.12);g2.lineCap="round";if(v){g2.shadowColor=col;g2.shadowBlur=8;}
+      let any=false;for(const d of DIRS){if(!cell.m[d])continue;const[dr,dc]=DV[d];g2.beginPath();g2.moveTo(cx,cy);g2.lineTo(cx+dc*CELL/2,cy+dr*CELL/2);g2.stroke();any=true;}
+      g2.shadowBlur=0;g2.fillStyle=col;g2.beginPath();g2.arc(cx,cy,CELL*(any?0.08:0.13),0,7);g2.fill();return;}
+    if(cell.t==="cross"){const hv=netVal(KH(r,c)),vv=netVal(KVv(r,c));
+      g2.lineCap="round";g2.strokeStyle=onColor(vv,isShort(KVv(r,c)));g2.lineWidth=Math.max(3,CELL*0.12);
+      g2.beginPath();g2.moveTo(cx,y+2);g2.lineTo(cx,y+CELL-2);g2.stroke();
+      g2.strokeStyle=onColor(hv,isShort(KH(r,c)));g2.beginPath();g2.moveTo(x+2,cy);g2.lineTo(cx-CELL*0.18,cy);g2.arc(cx,cy,CELL*0.18,Math.PI,0,true);g2.moveTo(cx+CELL*0.18,cy);g2.lineTo(x+CELL-2,cy);g2.stroke();return;}
+    if(cell.t==="src"){const v=netVal(KP(r,c,facing(cell,"out")));roundRect(x+CELL*0.14,y+CELL*0.2,CELL*0.72,CELL*0.6,6);
+      g2.fillStyle=v?css("--copper"):"#243b35";g2.fill();g2.strokeStyle=css("--cyan");g2.lineWidth=1.5;g2.stroke();
+      g2.fillStyle=v?"#052220":css("--ink");g2.font="bold "+Math.round(CELL*0.3)+"px 'Chakra Petch'";g2.textAlign="center";g2.textBaseline="middle";g2.fillText(cell.label,cx,cy-CELL*0.03);
+      g2.font=Math.round(CELL*0.22)+"px 'IBM Plex Mono'";g2.fillStyle=v?"#052220":css("--dim");g2.fillText(v?"1":"0",cx,cy+CELL*0.24);
+      stub(cx,cy,"E",onColor(v,false));return;}
+    if(cell.t==="led"){const v=netVal(KP(r,c,facing(cell,"in")));g2.beginPath();g2.arc(cx,cy,CELL*0.3,0,7);
+      g2.fillStyle=v?css("--copper"):"#20342e";if(v){g2.shadowColor=css("--copper");g2.shadowBlur=18;}g2.fill();g2.shadowBlur=0;g2.strokeStyle=css("--cyan");g2.lineWidth=1.5;g2.stroke();
+      g2.fillStyle=css("--dim");g2.font=Math.round(CELL*0.24)+"px 'Chakra Petch'";g2.textAlign="center";g2.textBaseline="middle";g2.fillText(cell.label,cx,cy+CELL*0.46);
+      stub(cx,cy,"W",onColor(v,false));return;}
+    if(cell.t==="rgb"){const rv=netVal(KP(r,c,"W")),gv=netVal(KP(r,c,"N")),bv=netVal(KP(r,c,"S"));
+      const col="rgb("+(rv?255:30)+","+(gv?255:30)+","+(bv?255:30)+")";roundRect(x+CELL*0.16,y+CELL*0.16,CELL*0.68,CELL*0.68,6);
+      g2.fillStyle=col;if(rv||gv||bv){g2.shadowColor=col;g2.shadowBlur=20;}g2.fill();g2.shadowBlur=0;g2.strokeStyle=css("--cyan");g2.lineWidth=1.5;g2.stroke();
+      g2.font="bold "+Math.round(CELL*0.2)+"px 'IBM Plex Mono'";g2.textBaseline="middle";
+      g2.textAlign="left";g2.fillStyle="#ff8a8a";g2.fillText("R",x+2,cy);
+      g2.textAlign="center";g2.fillStyle="#8affa0";g2.fillText("G",cx,y+CELL*0.13);g2.fillStyle="#8ab8ff";g2.fillText("B",cx,y+CELL*0.87);
+      stub(cx,cy,"W",onColor(rv,false));stub(cx,cy,"N",onColor(gv,false));stub(cx,cy,"S",onColor(bv,false));return;}
+    if(GATEPORTS[cell.t]){const pm=portsOf(cell);roundRect(x+CELL*0.16,y+CELL*0.16,CELL*0.68,CELL*0.68,6);g2.fillStyle="#14302a";g2.fill();g2.strokeStyle=css("--cyan");g2.lineWidth=1.5;g2.stroke();
+      g2.fillStyle=css("--ink");g2.font="600 "+Math.round(CELL*(cell.t==="nand"?0.19:0.21))+"px 'Chakra Petch'";g2.textAlign="center";g2.textBaseline="middle";g2.fillText(cell.t.toUpperCase(),cx,cy);
+      for(const d in pm){const key=KP(r,c,d),v=netVal(key),sc=isShort(key);stub(cx,cy,d,onColor(v,sc),pm[d]==="out");}return;}
+  }
+  function stub(cx,cy,d,col,arrow){const[dr,dc]=DV[d];const ex=cx+dc*CELL*0.42,ey=cy+dr*CELL*0.42,sx=cx+dc*CELL*0.26,sy=cy+dr*CELL*0.26;
+    g2.strokeStyle=col;g2.lineWidth=Math.max(2.5,CELL*0.09);g2.lineCap="round";g2.beginPath();g2.moveTo(sx,sy);g2.lineTo(ex,ey);g2.stroke();
+    if(arrow){g2.fillStyle=col;g2.beginPath();g2.moveTo(ex+dc*CELL*0.07,ey+dr*CELL*0.07);g2.lineTo(ex-dr*CELL*0.08-dc*CELL*0.02,ey-dc*CELL*0.08-dr*CELL*0.02);g2.lineTo(ex+dr*CELL*0.08-dc*CELL*0.02,ey+dc*CELL*0.08-dr*CELL*0.02);g2.closePath();g2.fill();}}
+  function roundRect(x,y,w,h,r){g2.beginPath();g2.moveTo(x+r,y);g2.arcTo(x+w,y,x+w,y+h,r);g2.arcTo(x+w,y+h,x,y+h,r);g2.arcTo(x,y+h,x,y,r);g2.arcTo(x,y,x+w,y,r);g2.closePath();}
+
+  function colorOf(o){return "rgb("+(o.r?255:40)+","+(o.g?255:40)+","+(o.b?255:40)+")";}
+  function renderTruth(){const n=puzzle.inputs.length,rows=1<<n,res=window._lastResults,curKey=probe.map(v=>v?1:0).join("");
+    let html="<table class='tt'><thead><tr>";puzzle.inputs.forEach((_,i)=>html+="<th>"+bitLabel(i)+"</th>");puzzle.outputs.forEach(o=>html+="<th>"+o.label+"</th>");if(res)html+="<th></th>";html+="</tr></thead><tbody>";
+    for(let i=0;i<rows;i++){const bits=[];for(let k=0;k<n;k++)bits.push((i>>(n-1-k))&1);const exp=puzzle.expect(bits);const cur=bits.join("")===curKey;html+="<tr class='"+(cur?"cur":"")+"'>";
+      bits.forEach(b=>html+="<td class='bit"+b+"'>"+b+"</td>");
+      puzzle.outputs.forEach((o,oi)=>{if(o.kind==="led")html+="<td class='bit"+exp[oi]+"'>"+exp[oi]+"</td>";else html+="<td><span class='sw' style='background:"+colorOf(exp[oi])+"'></span></td>";});
+      if(res){const rr=res.find(x=>x.bits.join("")===bits.join(""));html+="<td class='pf "+(rr&&rr.ok?"ok":"no")+"'>"+(rr?(rr.ok?"✓":"✗"):"")+"</td>";}html+="</tr>";}
+    html+="</tbody></table>";document.getElementById("ttWrap").innerHTML=html;}
+  function renderPuzzleList(){const el=document.getElementById("puzzleList");el.innerHTML="";PUZZLES.forEach(p=>{const d=document.createElement("div");d.className="plink"+(p.id===puzzle.id?" active":"");d.innerHTML="<span>"+p.name+"</span><span class='chk'>"+(progress[p.id]&&progress[p.id].solved?"✓":"")+"</span>";d.addEventListener("click",()=>loadPuzzle(p));el.appendChild(d);});}
+
+  function renderTools(){const wt=document.getElementById("wireTools");wt.innerHTML="";[["wire","WIRE"],["cross","BRIDGE"],["erase","ERASE"]].forEach(([id,lbl])=>wt.appendChild(mkTool(id,lbl)));
+    const gt=document.getElementById("gateTools");gt.innerHTML="";GATES.forEach(id=>gt.appendChild(mkTool(id,id.toUpperCase())));}
+  function mkTool(id,lbl){const b=document.createElement("button");b.className="tool"+(tool===id?" sel":"");b.innerHTML=lbl+(GATEPORTS[id]?"<small>rot "+toolRot+"</small>":"");b.addEventListener("click",()=>{tool=id;renderTools();});return b;}
+
+  // ---------- interaction ----------
+  function cellFromEvent(e){const rect=cv.getBoundingClientRect();const px=(e.clientX-rect.left)*(cv.width/rect.width)/DPR,py=(e.clientY-rect.top)*(cv.height/rect.height)/DPR;return {r:Math.floor(py/CELL),c:Math.floor(px/CELL)};}
+  function isComp(cell){return cell&&portsOf(cell);}
+  function ensureWire(r,c){if(!grid[r][c])grid[r][c]={t:"wire",m:blankMask()};return grid[r][c];}
+  function hookPortsAround(r,c){const wcell=grid[r][c];if(!wcell||wcell.t!=="wire")return;for(const d of DIRS){const[dr,dc]=DV[d];const nr=r+dr,nc=c+dc;if(!inb(nr,nc))continue;const nb=grid[nr][nc];const pm=portsOf(nb);if(pm&&pm[OPP[d]])wcell.m[d]=true;}}
+  function stepToward(from,to){const dr=Math.sign(to.r-from.r),dc=Math.sign(to.c-from.c);
+    if(dc!==0&&(Math.abs(to.c-from.c)>=Math.abs(to.r-from.r)||dr===0))return {r:from.r,c:from.c+dc,d:dc>0?"E":"W"};
+    return {r:from.r+dr,c:from.c,d:dr>0?"S":"N"};}
+  function advance(from,step){const d=step.d,to={r:step.r,c:step.c};if(!inb(to.r,to.c))return false;
+    const target=grid[to.r][to.c];
+    if(isComp(target)){const pm=portsOf(target);if(pm&&pm[OPP[d]]&&grid[from.r][from.c].t==="wire")grid[from.r][from.c].m[d]=true;return false;} // hook, stop
+    let tcell=target;
+    if(!tcell){tcell=grid[to.r][to.c]={t:"wire",m:blankMask()};}
+    else if(tcell.t==="wire"){const hasH=tcell.m.E||tcell.m.W,hasV=tcell.m.N||tcell.m.S;
+      if(hAxis(d)&&hasV&&!hasH){grid[to.r][to.c]={t:"cross"};tcell=grid[to.r][to.c];}
+      else if(!hAxis(d)&&hasH&&!hasV){grid[to.r][to.c]={t:"cross"};tcell=grid[to.r][to.c];}}
+    const fromCell=grid[from.r][from.c];if(fromCell.t==="wire")fromCell.m[d]=true;if(tcell.t==="wire")tcell.m[OPP[d]]=true;
+    return true;
+  }
+  function eraseAt(r,c){const cell=grid[r][c];if(!cell||cell.fixed)return;
+    for(const d of DIRS){const[dr,dc]=DV[d];const nr=r+dr,nc=c+dc;if(!inb(nr,nc))continue;const nb=grid[nr][nc];if(nb&&nb.t==="wire")nb.m[OPP[d]]=false;}
+    grid[r][c]=null;}
+
+  cv.addEventListener("pointerdown",e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);const{r,c}=cellFromEvent(e);if(!inb(r,c))return;const cell=grid[r][c];
+    if(e.button===2){eraseDrag=true;eraseAt(r,c);rebuild();refreshMetrics();renderTruth();draw();return;}
+    if(cell&&cell.fixed){if(cell.t==="src"){const idx=puzzle.inputs.findIndex(([ir,ic])=>ir===r&&ic===c);if(idx>=0){probe[idx]=!probe[idx];rebuild();refreshMetrics();renderTruth();draw();}}return;}
+    if(tool==="erase"){eraseDrag=true;eraseAt(r,c);}
+    else if(tool==="wire"){ensureWire(r,c);hookPortsAround(r,c);lastRC={r,c};drawing=true;}
+    else if(tool==="cross"){grid[r][c]={t:"cross"};}
+    else if(GATEPORTS[tool]){grid[r][c]={t:tool,rot:toolRot};}
+    rebuild();refreshMetrics();renderTruth();draw();});
+
+  cv.addEventListener("pointermove",e=>{const{r,c}=cellFromEvent(e);hover={r,c};if(!inb(r,c)){draw();return;}
+    if(eraseDrag){eraseAt(r,c);rebuild();refreshMetrics();renderTruth();draw();return;}
+    if(drawing&&tool==="wire"&&lastRC&&!(r===lastRC.r&&c===lastRC.c)){
+      let guard=0;while(!(lastRC.r===r&&lastRC.c===c)&&guard++<40){const step=stepToward(lastRC,{r,c});const moved=advance(lastRC,step);if(!moved)break;lastRC={r:step.r,c:step.c};}
+      rebuild();refreshMetrics();renderTruth();draw();return;}
+    draw();});
+
+  window.addEventListener("pointerup",()=>{drawing=false;eraseDrag=false;lastRC=null;});
+  cv.addEventListener("mouseleave",()=>{hover=null;draw();});
+  cv.addEventListener("contextmenu",e=>e.preventDefault());
+  window.addEventListener("keydown",e=>{if(e.key==="r"||e.key==="R"){
+    if(hover&&inb(hover.r,hover.c)&&grid[hover.r][hover.c]&&GATEPORTS[grid[hover.r][hover.c].t]&&!grid[hover.r][hover.c].fixed){grid[hover.r][hover.c].rot=(grid[hover.r][hover.c].rot+1)%4;rebuild();refreshMetrics();draw();}
+    else if(GATEPORTS[tool]){toolRot=(toolRot+1)%4;renderTools();}}});
+
+  function setVerdict(t,cls){const v=document.getElementById("verdict");v.textContent=t;v.className="verdict"+(cls?" "+cls:"");}
+  document.getElementById("btnRun").addEventListener("click",runTest);
+  document.getElementById("btnClear").addEventListener("click",()=>{for(let r=0;r<H;r++)for(let c=0;c<W;c++){const cell=grid[r][c];if(cell&&!cell.fixed)grid[r][c]=null;}window._lastResults=null;rebuild();refreshMetrics();setVerdict("Cleared.","");renderTruth();draw();});
+  document.getElementById("btnBegin").addEventListener("click",()=>{document.getElementById("intro").classList.add("hidden");sizeCanvas();draw();});
+  window.addEventListener("resize",()=>{sizeCanvas();draw();});
+
+  renderTools();loadPuzzle(PUZZLES[0]);
+})();
+</script>
+</body>
+</html>
